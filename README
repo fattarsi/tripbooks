@@ -1,0 +1,11 @@
+TripBooks
+
+HTML5 app for calculating shared trip expenses. Simple app (one file), using
+local SQL storage.
+
+ * Click the 'Start Trip' button to setup the local SQL database.
+ * Enter a transaction
+ * TripBooks will keep a tally of total cost / person and how much each
+  * person is owed / owes.
+
+Try it out here: http://fattarsi.com/m/html5/tripbooks/

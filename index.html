@@ -1,0 +1,121 @@
+<!DOCTYPE HTML> 
+<html manifest="cache.manifest">
+<head>
+ <meta charset="utf-8">
+
+ <title>TripBooks</title>
+ <style>
+
+ </style>
+</head>
+
+<body>
+<div style="float:right">
+<button onclick="createTable()">start trip</button>
+<button onclick="dropTable()">delete trip</button>
+</div>
+
+<div id="db-log"></div>
+<hr>
+amount $<input size="4" type="text" id="amount"><br>
+paid by: <input size="8" type="text" id="paid_by"><br>
+notes: <input type="text" id="notes">
+<button onclick="newRecord()">new record</button>
+<hr>
+
+<div id="db_results"></div>
+</body>
+<script>
+var db;
+db = openDatabase("TripBooks", "1.0", "TripBooks DB", 200000);
+var log = document.getElementById('db-log');
+showRecords();
+
+function onError(tx, error) {
+ log.innerHTML += '<p>' + error.message + '</p>';
+}
+
+function showRecords() {
+ document.getElementById('db_results').innerHTML = '';
+ db.transaction(function(tx) {
+  tx.executeSql("SELECT * FROM Records", [], function(tx, result) {
+   var total = 0;
+   var ledger = new Array();
+   for (var i = 0, item = null; i < result.rows.length; i++){
+    item = result.rows.item(i);
+    total += parseInt(item['amount']);
+    if (item['paid_by'] in ledger) {
+      ledger[item['paid_by']] += parseInt(item['amount']);
+    } else {
+      ledger[item['paid_by']] = parseInt(item['amount']);
+    }
+    document.getElementById('db_results').innerHTML +=
+     '<li>$' + item['amount'] + ' - ' + item['paid_by'] +' - ' + item['notes'] + ' <a href="#" onclick="deleteRecord(\''+item['id']+'\')">[delete]</a></li>';
+   }
+   document.getElementById('db_results').innerHTML += '<hr><strong>total</strong>: $' + total + '<br>';
+   var people_count = 0;
+   //crude way to get size of hash table
+   for (var i in ledger) {
+    people_count += 1;
+   }
+   var cost_per_person = Math.round(total/people_count*100)/100;
+   document.getElementById('db_results').innerHTML += '$'+cost_per_person+' per person<br>';
+   for (var i in ledger) {
+    document.getElementById('db_results').innerHTML += i + ' paid $'+ ledger[i];
+    if (parseInt(ledger[i]) > cost_per_person) {
+     document.getElementById('db_results').innerHTML += ' (is owed $'+Math.round((parseInt(ledger[i]) - cost_per_person)*100)/100+')<br>';
+    } else {
+     document.getElementById('db_results').innerHTML += ' (owes $'+Math.round((cost_per_person - parseInt(ledger[i]))*100)/100+')<br>';
+    }
+   }
+  });
+ });
+}
+
+function createTable() {
+ db.transaction(function(tx) {
+  tx.executeSql("CREATE TABLE Records (id REAL UNIQUE, amount, paid_by, notes)", [],
+   function(tx) { log.innerHTML = '<p>Table created!</p>' },
+   onError);
+ });
+}
+
+function dropTable() {
+ db.transaction(function(tx) {
+  tx.executeSql("DROP TABLE Records", [],
+   function(tx) {
+    log.innerHTML = '<p>Table dropped!</p>';
+    showRecords();
+    },
+   onError);
+ });
+}
+
+function newRecord() {
+ var num = Math.round(Math.random() * 100000);
+ var amount = document.querySelector('#amount').value
+ var paid_by = document.querySelector('#paid_by').value
+ var notes = document.querySelector('#notes').value
+ document.querySelector('#amount').value = '';
+ document.querySelector('#paid_by').value = '';
+ document.querySelector('#notes').value = '';
+ db.transaction(function(tx) {
+  tx.executeSql("INSERT INTO Records (id, amount, paid_by, notes) VALUES (?, ?, ?, ?)", [num, amount, paid_by, notes],
+   function(tx, result) {
+    log.innerHTML = '';
+    showRecords();
+   },
+   onError);
+ });
+}
+
+function deleteRecord(id) {
+ db.transaction(function(tx) {
+  tx.executeSql("DELETE FROM Records WHERE id=?", [id],
+   function(tx, result) { showRecords() },
+   onError);
+ });
+}
+
+</script>
+</html>
